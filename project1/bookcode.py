@@ -5,11 +5,12 @@ import pandas as pd
 import networkx as nx
 import numpy as np
 from scipy.special import loggamma
+import matplotlib.pyplot as plt
 import os
 
 currentDirectory = os.getcwd().replace('\\', '/')
 exampleDirectory = currentDirectory + '/example'
-
+dataDirectory = currentDirectory + '/data'
 
 
 def sub2ind(size, x):
@@ -61,7 +62,7 @@ def bayesian_score(vars, G, D):
     # p = sum([sum(sum(loggamma(sum(z)))) for z in zip(alpha, M)]) # if we want to be real fancy and do it all in one line!
     return sum(bayesian_score_component(M[i], alpha[i]) for i in range(n))
 
-
+# TODO: Figure out write_to_gph from this example 4.1
 # # Example 4.1
 # G_41 = nx.DiGraph()
 # G_41.add_nodes_from([0, 1, 2]) # list of nodes
@@ -81,18 +82,54 @@ def bayesian_score(vars, G, D):
 # # print(theta)
 # print(score)
 
-# Example from example
-ex = nx.DiGraph()
-edges = nx.read_edgelist(exampleDirectory + '/example.gph', delimiter=',')
-ex.add_edges_from(edges.edges())
-# nx.draw_networkx(ex, with_labels=True)
-G_ex = nx.convert_node_labels_to_integers(ex)
+# # Example from example
+# ex = nx.DiGraph()
+# edges = nx.read_edgelist(exampleDirectory + '/example.gph', delimiter=',')
+# ex.add_edges_from(edges.edges())
+# # nx.draw_networkx(ex, with_labels=True)
+# G_ex = nx.convert_node_labels_to_integers(ex)
+#
+# ex_data = pd.read_csv(exampleDirectory + '/example.csv')
+# colnames = np.array(ex_data.columns)
+# D_ex = ex_data.values - 1
+# vars_ex = np.array(ex_data.max())
+#
+# score_ex = bayesian_score(vars_ex, G_ex, D_ex)
+# print(score_ex)
 
-ex_data = pd.read_csv(exampleDirectory + '/example.csv')
-colnames = np.array(ex_data.columns)
-D_ex = ex_data.values - 1
-vars_ex = np.array(ex_data.max())
+# small CSV test
+data = pd.read_csv(dataDirectory + '/small.csv')
+colnames = np.array(data.columns)
+n = colnames.size
+D = data.values - 1
+nodels = [(i,{'name':colnames[i]}) for i in range(n)]
+G = nx.DiGraph()
+G.add_nodes_from(nodels)
+vars = np.array(data.max())
+plt.figure(figsize =(9, 9))
+nx.draw_networkx(G, with_labels=True)
+plt.show()
 
-score_ex = bayesian_score(vars_ex, G_ex, D_ex)
-print(score_ex)
+# TODO: Create separate file for plotting from .gph once completed
+# plt.figure()
+# pos_nodes = nx.circular_layout(G)
+# nx.draw(G, pos_nodes, with_labels=True)
+#
+# pos_attrs = {}
+# for node, coords in pos_nodes.items():
+#     pos_attrs[node] = (coords[0], coords[1] + 0.08)
+#
+# node_attrs = nx.get_node_attributes(G, 'name')
+# custom_node_attrs = {}
+# for node, attr in node_attrs.items():
+#     custom_node_attrs[node] = attr
+#
+# nx.draw_networkx_labels(G, pos_attrs, labels=custom_node_attrs)
+# axes = plt.gca()
+# axes.set_xlim([-2,2])
+# axes.set_ylim([-2,2])
+# plt.savefig('small.png')
+# plt.show()
+# score_ex = bayesian_score(vars_ex, G_ex, D_ex)
+# print(score_ex)
 
