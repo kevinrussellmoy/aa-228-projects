@@ -16,6 +16,7 @@ MAX_ITER = 1000
 
 
 def sub2ind(size, x):
+    # Supporting function for Algorithm 4.1
     k = np.hstack((1, size[0:-1]))
     return np.dot(k, x)
 
@@ -46,9 +47,8 @@ def uniform_prior(vars, G):
     return [np.ones([q[i], r[i]], dtype=int) for i in range(n)]
 
 
-# Algorithm 5.1: An algorithm for computing the Bayesian score for a list of variables vars and a graph G given data D,
-# using the uniform prior from Algorithm 4.2.
 def bayesian_score_component(m,a):
+    # Supporting function for Algorithm 5.1
     p = np.sum(loggamma(a + m))
     p -= np.sum(loggamma(a))  # TODO: Remove this later: loggamma(a) = 0 for uniform prior
     p += np.sum(loggamma(np.sum(a, axis=1)))
@@ -57,6 +57,8 @@ def bayesian_score_component(m,a):
 
 
 def bayesian_score(vars, G, D):
+    # Algorithm 5.1: An algorithm for computing the Bayesian score for a list of variables vars and a graph G given data D,
+    # using the uniform prior from Algorithm 4.2.
     r = np.array(vars)
     n = r.size
     alpha = uniform_prior(vars, G)
@@ -68,7 +70,7 @@ def graph_from_df(df):
     # Produce graph from dataframe, with headers as variable names and rows of instantiations
     # Return:
     # vars - vector of each variable's total possible number of instantiations
-    # G - completely unconnected graph
+    # G - completely unconnected graph with n nodes
     # D - NumPy array of dataset
     # n - number of nodes
     # vnames - variable names in order
@@ -94,7 +96,7 @@ def rand_g_gen(G, n):
     return G2
 
 
-def localfit(vars, G, D, n):
+def localfit(vars, D, G, n):
     # local directed graph search
     Gl = G
     y = bayesian_score(vars, Gl, D)
@@ -113,15 +115,17 @@ def localfit(vars, G, D, n):
 
 
 def k2fit(vars, D, G, n):
-    # K2 fit using random ordering given known number of nodes n for completely unconnected graph H
+    # K2 fit using random ordering given known number of nodes n for completely unconnected graph M
+    # with nodes [0, 1, 2, ..., n-1]
     ordering = list(range(n))
     shuffle(ordering)
+    print(ordering)
     for k in range(1,n):
         i = ordering[k]
         y = bayesian_score(vars, G, D)
-        y_best = -np.inf
-        j_best = -1
-        while y_best < y:
+        while True:
+            y_best = -np.inf
+            j_best = -1
             for m in range(k):
                 j = ordering[m]
                 if not G.has_edge(j, i):
@@ -130,15 +134,13 @@ def k2fit(vars, D, G, n):
                     if y2 > y_best:
                         y_best = y2
                         j_best = j
-                G.remove_edge(j, i)
-            # print("y_best is: " + str(y_best))
-            # print("j_best is: " + str(j_best))
-            # if y_best > y:
-            y = y_best
-            G.add_edge(j_best, i)
-            print("adding edge: " + str(j_best) + " to " + str(i))
-            # else:
-            #     break
+                    G.remove_edge(j, i)
+            if y_best > y:
+                y = y_best
+                G.add_edge(j_best, i)
+                print("adding edge: " + str(j_best) + " to " + str(i))
+            else:
+                break
     return G
 
 
@@ -175,13 +177,10 @@ def compute(infile, outfile):
     print('Elapsed time of ' + infile + ' is: ' + str(elapsed))
     write_gph(G_fit, vnames, n, outfile)
     plt.figure()
-    nx.draw_networkx(G_fit, with_labels=True, arrows=True)
+    pos = nx.circular_layout(G_fit)
+    nx.draw_networkx(G_fit, pos=pos, with_labels=True, arrows=True, node_color='bisque')
     plt.savefig((fn_ext[0] + '.png'))
     plt.show()
-
-    # TODO: Create idx2names = dictionary from node numbers (idx) to variable names
-    # TODO: Create .gph from edges
-
 
 
 def main():
