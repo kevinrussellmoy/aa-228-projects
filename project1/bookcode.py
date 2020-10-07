@@ -4,8 +4,12 @@
 import pandas as pd
 import networkx as nx
 import numpy as np
-# from sklearn.preprocessing import normalize
 from scipy.special import loggamma
+import os
+
+currentDirectory = os.getcwd().replace('\\', '/')
+exampleDirectory = currentDirectory + '/example'
+
 
 
 def sub2ind(size, x):
@@ -16,11 +20,11 @@ def sub2ind(size, x):
 # Algorithm 4.1: A function for extracting the statistics, or counts,
 # from a discrete dataset D assuming a Bayesian network with variables vars and structure G
 def statistics(vars, G, D):
-    n = D.shape[0]
+    n = D.shape[1]
     r = np.array(vars)
     q = [int(np.prod([r[j] for j in G.predecessors(i)])) for i in range(n)]
     M = [np.zeros([q[i], r[i]], dtype=int) for i in range(n)]
-    for column in D.T:
+    for column in D:
         for i in range(n):
             k = column[i]
             parents = list(G.predecessors(i))
@@ -43,9 +47,9 @@ def uniform_prior(vars, G):
 # using the uniform prior from Algorithm 4.2.
 def bayesian_score_component(m,a):
     p = np.sum(loggamma(a + m))
-    p -= np.sum(loggamma(a)) # TODO: Remove this later: loggamma(a) = 0 for uniform prior
-    p += np.sum(loggamma(np.sum(a)))
-    p -= np.sum(loggamma(np.sum(a) + np.sum(m)))
+    p -= np.sum(loggamma(a))  # TODO: Remove this later: loggamma(a) = 0 for uniform prior
+    p += np.sum(loggamma(np.sum(a, axis=1)))
+    p -= np.sum(loggamma(np.sum(a, axis=1) + np.sum(m, axis=1)))
     return p
 
 
@@ -53,31 +57,43 @@ def bayesian_score(vars, G, D):
     r = np.array(vars)
     n = r.size
     alpha = uniform_prior(vars, G)
+    M = statistics(vars, G, D)
+    print(M)
     # p = sum([sum(sum(loggamma(sum(z)))) for z in zip(alpha, M)]) # if we want to be real fancy and do it all in one line!
     return sum(bayesian_score_component(M[i], alpha[i]) for i in range(n))
 
 
-# Example 4.1
-G_41 = nx.DiGraph()
-G_41.add_nodes_from([0, 1, 2]) # list of nodes
-G_41.add_edges_from([(0,1), (2,1)])
-vars_41 = [2,2,2] # number of values each variable can take on from [1,2,3]
-# print(list(G.predecessors(2))) # Get list of predecessors (1st parents) of a node 2
-D_41 = np.array([[1, 2, 2, 1], [1, 2, 2, 1], [2, 2, 2, 2]]) - 1
-
-M = statistics(vars_41, G_41, D_41)
-
-priors = uniform_prior(vars_41, G_41)
-
-# theta = [M[i]/np.amax(M[i],axis=1,keepdims=True) for i in range(D_41.shape[0])] # throws a warning for dem NaNs
-
-score = bayesian_score(vars_41, G_41, D_41)
-
-# print(M)
+# # Example 4.1
+# G_41 = nx.DiGraph()
+# G_41.add_nodes_from([0, 1, 2]) # list of nodes
+# G_41.add_edges_from([(0,1), (2,1)])
+# nx.draw_networkx(G_41, with_labels = True)
+# vars_41 = [2,2,2] # number of values each variable can take on from [1,2,3]
+# # print(list(G.predecessors(2))) # Get list of predecessors (1st parents) of a node 2
+# D_41 = np.array([[1, 2, 2, 1], [1, 2, 2, 1], [2, 2, 2, 2]]) - 1
 #
-# print(priors)
+# M = statistics(vars_41, G_41, D_41)
+# priors = uniform_prior(vars_41, G_41)
+# # theta = [M[i]/np.amax(M[i],axis=1,keepdims=True) for i in range(D_41.shape[0])] # throws a warning for dem NaNs
+# score = bayesian_score(vars_41, G_41, D_41)
 #
-# print(theta)
+# # print(M)
+# # print(priors)
+# # print(theta)
+# print(score)
 
-print(score)
+# Example from example
+ex = nx.DiGraph()
+edges = nx.read_edgelist(exampleDirectory + '/example.gph', delimiter=',')
+ex.add_edges_from(edges.edges())
+# nx.draw_networkx(ex, with_labels=True)
+G_ex = nx.convert_node_labels_to_integers(ex)
+
+ex_data = pd.read_csv(exampleDirectory + '/example.csv')
+colnames = np.array(ex_data.columns)
+D_ex = ex_data.values - 1
+vars_ex = np.ones(colnames.size, dtype=int)*3
+
+score_ex = bayesian_score(vars_ex, G_ex, D_ex)
+print(score_ex)
 
