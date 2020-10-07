@@ -1,0 +1,7 @@
+passengerclass, portembarked
+passengerclass, sex
+passengerclass, numsiblings
+passengerclass, age
+passengerclass, fare
+sex, survived
+numsiblings, numparentschildren

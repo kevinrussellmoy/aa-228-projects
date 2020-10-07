@@ -4,9 +4,15 @@ import networkx as nx
 import numpy as np
 from scipy.special import loggamma
 import os
+from timeit import default_timer as timer
+from numpy.random import randint, shuffle
+import matplotlib.pyplot as plt
+
 
 currentDirectory = os.getcwd().replace('\\', '/')
 dataDirectory = currentDirectory + '/data'
+
+MAX_ITER = 1000
 
 
 def sub2ind(size, x):
@@ -60,6 +66,12 @@ def bayesian_score(vars, G, D):
 
 def graph_from_df(df):
     # Produce graph from dataframe, with headers as variable names and rows of instantiations
+    # Return:
+    # vars - vector of each variable's total possible number of instantiations
+    # G - completely unconnected graph
+    # D - NumPy array of dataset
+    # n - number of nodes
+    # vnames - variable names in order
     vnames = np.array(df.columns)
     n = vnames.size
     D = df.values - 1
@@ -67,25 +79,109 @@ def graph_from_df(df):
     G = nx.DiGraph()
     G.add_nodes_from(nodels)
     vars = np.array(df.max())
-    return vars, G, D
+    return vars, G, D, n, vnames
 
 
-def write_gph(dag, idx2names, filename):
+def rand_g_gen(G, n):
+    # Generate a new random graph, G2, in the neighborhood of G with number of nodes n
+    i = randint(0, high=n)
+    j = (i + randint(2, high=n) - 1)//n
+    G2 = G.copy()
+    if G2.has_edge(i,j):
+        G2.remove_edge(i,j)
+    else:
+        G2.add_edge(i,j)
+    return G2
+
+
+def localfit(vars, G, D, n):
+    # local directed graph search
+    Gl = G
+    y = bayesian_score(vars, Gl, D)
+    for k in range(MAX_ITER):
+        G_rand = rand_g_gen(Gl,n)
+        # if len(list(nx.simple_cycles(G2))) > 0:  #if cycles are detected
+        if nx.is_directed_acyclic_graph(G_rand):
+            y2 = bayesian_score(vars, G_rand, D)
+            print('new score: ' + str(y2))
+        else:
+            y2 = -np.inf
+        if y2 > y:
+            y = y2
+            Gl = G_rand
+    return Gl
+
+
+def k2fit(vars, D, G, n):
+    # K2 fit using random ordering given known number of nodes n for completely unconnected graph H
+    ordering = list(range(n))
+    shuffle(ordering)
+    for k in range(1,n):
+        i = ordering[k]
+        y = bayesian_score(vars, G, D)
+        y_best = -np.inf
+        j_best = -1
+        while y_best < y:
+            for m in range(k):
+                j = ordering[m]
+                if not G.has_edge(j, i):
+                    G.add_edge(j, i)
+                    y2 = bayesian_score(vars, G, D)
+                    if y2 > y_best:
+                        y_best = y2
+                        j_best = j
+                G.remove_edge(j, i)
+            # print("y_best is: " + str(y_best))
+            # print("j_best is: " + str(j_best))
+            # if y_best > y:
+            y = y_best
+            G.add_edge(j_best, i)
+            print("adding edge: " + str(j_best) + " to " + str(i))
+            # else:
+            #     break
+    return G
+
+
+def write_gph(dag, idx2names, n, filename):
+    edges = list(dag.edges())
+    num_edges = np.shape(edges)[0]
     with open(filename, 'w') as f:
-        for edge in dag.edges():
-            f.write("{}, {}\n".format(idx2names[edge[0]], idx2names[edge[1]]))
+        for i in range(num_edges):
+            f.write("{}, {}\n".format(idx2names[edges[i][0]], idx2names[edges[i][1]]))
 
 
-def k2fit(vars, D):
-    # K2 search with ordering taken randomly.
-    pass
+def print_gph(dag, idx2names, n):
+    edges = list(dag.edges())
+    num_edges = np.shape(edges)[0]
+    for i in range(num_edges):
+        print("{}, {}\n".format(idx2names[edges[i][0]], idx2names[edges[i][1]]))
+
 
 def compute(infile, outfile):
-    # TODO: Create idx2names = dictionary from node numbers (idx) to filenames
+    start = timer()
+    fn_ext = os.path.splitext(infile)
     df = pd.read_csv(dataDirectory + '/' + infile)
-    vars, G, D = graph_from_df(df)
-    score = bayesian_score(vars, G, D)
-    print('Score of ' + infile + ' is: ' + str(score))
+    vars, G, D, n, vnames = graph_from_df(df)
+    isdag = False
+    while not isdag:
+        G_fit = k2fit(vars, D, G, n)
+        print(list(G_fit.edges))
+        isdag = nx.is_directed_acyclic_graph(G_fit)
+        print("is it a dag? " + str(isdag) + "!")
+    score = bayesian_score(vars, G_fit, D)
+    end = timer()
+    elapsed = end - start
+    print('Final score of ' + infile + ' is: ' + str(score))
+    print('Elapsed time of ' + infile + ' is: ' + str(elapsed))
+    write_gph(G_fit, vnames, n, outfile)
+    plt.figure()
+    nx.draw_networkx(G_fit, with_labels=True, arrows=True)
+    plt.savefig((fn_ext[0] + '.png'))
+    plt.show()
+
+    # TODO: Create idx2names = dictionary from node numbers (idx) to variable names
+    # TODO: Create .gph from edges
+
 
 
 def main():

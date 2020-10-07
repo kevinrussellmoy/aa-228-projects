@@ -63,24 +63,25 @@ def bayesian_score(vars, G, D):
     return sum(bayesian_score_component(M[i], alpha[i]) for i in range(n))
 
 # TODO: Figure out write_to_gph from this example 4.1
-# # Example 4.1
-# G_41 = nx.DiGraph()
-# G_41.add_nodes_from([0, 1, 2]) # list of nodes
-# G_41.add_edges_from([(0,1), (2,1)])
-# nx.draw_networkx(G_41, with_labels = True)
-# vars_41 = [2,2,2] # number of values each variable can take on from [1,2,3]
-# # print(list(G.predecessors(2))) # Get list of predecessors (1st parents) of a node 2
-# D_41 = np.array([[1, 2, 2, 1], [1, 2, 2, 1], [2, 2, 2, 2]]) - 1
-#
-# M = statistics(vars_41, G_41, D_41)
-# priors = uniform_prior(vars_41, G_41)
-# # theta = [M[i]/np.amax(M[i],axis=1,keepdims=True) for i in range(D_41.shape[0])] # throws a warning for dem NaNs
-# score = bayesian_score(vars_41, G_41, D_41)
-#
-# # print(M)
-# # print(priors)
-# # print(theta)
-# print(score)
+# Example 4.1
+G_41 = nx.DiGraph()
+G_41.add_nodes_from([0, 1, 2]) # list of nodes
+G_41.add_edges_from([(0,1), (2,1)])
+nx.draw_networkx(G_41, with_labels = True)
+vars_41 = [2,2,2] # number of values each variable can take on from [1,2,3]
+# print(list(G.predecessors(2))) # Get list of predecessors (1st parents) of a node 2
+D_41 = np.array([[1, 2, 2, 1], [1, 2, 2, 1], [2, 2, 2, 2]]) - 1
+D_41 = D_41.T
+
+M = statistics(vars_41, G_41, D_41)
+priors = uniform_prior(vars_41, G_41)
+# theta = [M[i]/np.amax(M[i],axis=1,keepdims=True) for i in range(D_41.shape[0])] # throws a warning for dem NaNs
+score = bayesian_score(vars_41, G_41, D_41)
+
+# print(M)
+# print(priors)
+# print(theta)
+print(score)
 
 # # Example from example
 # ex = nx.DiGraph()
@@ -97,18 +98,18 @@ def bayesian_score(vars, G, D):
 # score_ex = bayesian_score(vars_ex, G_ex, D_ex)
 # print(score_ex)
 
-# small CSV test
-data = pd.read_csv(dataDirectory + '/small.csv')
-colnames = np.array(data.columns)
-n = colnames.size
-D = data.values - 1
-nodels = [(i,{'name':colnames[i]}) for i in range(n)]
-G = nx.DiGraph()
-G.add_nodes_from(nodels)
-vars = np.array(data.max())
-plt.figure(figsize =(9, 9))
-nx.draw_networkx(G, with_labels=True)
-plt.show()
+# # small CSV test
+# data = pd.read_csv(dataDirectory + '/small.csv')
+# colnames = np.array(data.columns)
+# n = colnames.size
+# D = data.values - 1
+# nodels = [(i,{'name':colnames[i]}) for i in range(n)]
+# G = nx.DiGraph()
+# G.add_nodes_from(nodels)
+# vars = np.array(data.max())
+# plt.figure(figsize =(9, 9))
+# nx.draw_networkx(G, with_labels=True)
+# plt.show()
 
 # TODO: Create separate file for plotting from .gph once completed
 # plt.figure()
