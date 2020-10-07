@@ -58,7 +58,6 @@ def bayesian_score(vars, G, D):
     n = r.size
     alpha = uniform_prior(vars, G)
     M = statistics(vars, G, D)
-    print(M)
     # p = sum([sum(sum(loggamma(sum(z)))) for z in zip(alpha, M)]) # if we want to be real fancy and do it all in one line!
     return sum(bayesian_score_component(M[i], alpha[i]) for i in range(n))
 
@@ -92,7 +91,7 @@ G_ex = nx.convert_node_labels_to_integers(ex)
 ex_data = pd.read_csv(exampleDirectory + '/example.csv')
 colnames = np.array(ex_data.columns)
 D_ex = ex_data.values - 1
-vars_ex = np.ones(colnames.size, dtype=int)*3
+vars_ex = np.array(ex_data.max())
 
 score_ex = bayesian_score(vars_ex, G_ex, D_ex)
 print(score_ex)

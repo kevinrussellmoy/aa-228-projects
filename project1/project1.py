@@ -1,7 +1,12 @@
 import sys
 import pandas as pd
 import networkx as nx
+import numpy as np
+from scipy.special import loggamma
+import os
 
+currentDirectory = os.getcwd().replace('\\', '/')
+exampleDirectory = currentDirectory + '/data'
 
 def write_gph(dag, idx2names, filename):
     with open(filename, 'w') as f:
