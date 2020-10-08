@@ -96,9 +96,11 @@ def rand_g_gen(G, n):
     return G2
 
 
-def localfit(vars, D, G, n):
+def localfit(vars, D, n):
     # local directed graph search
-    Gl = G
+    # Start with random graph
+    Gl = nx.fast_gnp_random_graph(n,0.05,directed=True)
+    Gl.remove_edges_from([(u,v) for (u, v) in Gl.edges() if u < v])
     y = bayesian_score(vars, Gl, D)
     for k in range(MAX_ITER):
         G_rand = rand_g_gen(Gl,n)
@@ -167,6 +169,7 @@ def compute(infile, outfile):
     isdag = False
     while not isdag:
         G_fit = k2fit(vars, D, G, n)
+        # G_fit = localfit(vars, D, n)
         print(list(G_fit.edges))
         isdag = nx.is_directed_acyclic_graph(G_fit)
         print("is it a dag? " + str(isdag) + "!")
