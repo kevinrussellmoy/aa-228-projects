@@ -101,9 +101,6 @@ def compute(infile, outfile):
         policy.to_csv(outfile, index=False, header=False)
     if infile == 'large.csv':
         # TODO: Try eligibility traces!
-        # Tried Q-learning and it is NOT GOOD LOL
-        # Probably due to all of the zero-reward states and that many states are not visited!
-
         Q = np.zeros((312020,9))
         N = np.ones((312020,9))
         for i in range(len(df.index)):
@@ -111,7 +108,7 @@ def compute(infile, outfile):
             a = df.a[i] - 1
             r = df.r[i]
             sp = df.sp[i] - 1
-            Q[s,a] += 1/N[s,a] * (r + max(Q[sp,:]) - Q[s, a])
+            Q[s,a] += 1/N[s,a] * (r + GAMMA*max(Q[sp,:]) - Q[s, a])
             N[s,a] += 1
         # Find filled rows for Q
         filleds = np.where(Q.any(axis=1))[0]
@@ -119,13 +116,15 @@ def compute(infile, outfile):
             if s not in filleds:
                 closest = (np.abs(filleds - s)).argmin()
                 Q[s, :] = Q[filleds[closest], :]
-        policy = pd.DataFrame((np.argmax(Q, axis=1) + 1).astype(int))
-        # policy[policy.action == 0] = 4
-        # TODO: Handle states outside of range(min(df.s)-1, max(df.s)-1): How to increase state number for below and
+        policy = (np.argmax(Q, axis=1) + 1).astype(int)
+        # Handle states outside of range(min(df.s)-1, max(df.s)-1): How to increase state number for below and
         #  decrement for state number above
-        # TODO: Best thing to do is use state 4 below min
-        # TODO: Best thing to do is use state 3 above max
-        policy.to_csv(outfile, index=False, header=False)
+        # Best thing to do is use state 4 below min
+        # Best thing to do is use state 3 above max
+        policy[0:min(df.s) - 1] = 4
+        policy[max(df.s):] = 3
+        policydf = pd.DataFrame(policy)
+        policydf.to_csv(outfile, index=False, header=False)
     end = timer()
     elapsed = end - start
     print('Elapsed time of ' + infile + ' is: ' + str(elapsed))
