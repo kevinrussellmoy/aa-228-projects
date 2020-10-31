@@ -105,32 +105,26 @@ def compute(infile, outfile):
         # Probably due to all of the zero-reward states and that many states are not visited!
 
         Q = np.zeros((312020,9))
-        N = np.zeros((312020,9))
+        N = np.ones((312020,9))
         for i in range(len(df.index)):
             s = df.s[i] - 1
             a = df.a[i] - 1
             r = df.r[i]
             sp = df.sp[i] - 1
-            # print([s, a, r, sp])
-            # e_tp = r + GAMMA * lil_matrix.getrow(Q, sp).tocsr().max() - Q[s,a]
-            # e_t = r + GAMMA * lil_matrix.getrow(Q, sp).tocsr().max() - lil_matrix.getrow(Q, s).tocsr().max()
-            # for s in range(312020):
-            #     for a in range(9):
-            #         N[s,a] = LAMBDA * GAMMA * N[s,a]
-            #         Q[s,a] = Q[s,a] + ALPHA * N * e_t
-            e_tp = r + GAMMA * np.max(Q[sp,:]) - Q[s,a]
-            e_t = r + GAMMA * np.max(Q[sp,:]) - np.max(Q[s,:])
-            N = LAMBDA * GAMMA * N
-            Q = Q + ALPHA * N * e_t
-            # for s in range(312020):
-            #     for a in range(9):
-            #         N[s,a] = LAMBDA * GAMMA * N[s,a]
-            #         Q[s,a] = Q[s,a] + ALPHA * N[s,a] * e_t
-            Q[s,a] += ALPHA * N[s,a] * e_tp
+            Q[s,a] += 1/N[s,a] * (r + max(Q[sp,:]) - Q[s, a])
             N[s,a] += 1
-        # policy = pd.DataFrame(Q[1:, 1:].tocsr().argmax(axis=1), columns=['action'])
-        policy = pd.DataFrame((np.max(Q, axis=1) + 1).astype(int))
+        # Find filled rows for Q
+        filleds = np.where(Q.any(axis=1))[0]
+        for s in range(min(df.s)-1, max(df.s)-1):
+            if s not in filleds:
+                closest = (np.abs(filleds - s)).argmin()
+                Q[s, :] = Q[filleds[closest], :]
+        policy = pd.DataFrame((np.argmax(Q, axis=1) + 1).astype(int))
         # policy[policy.action == 0] = 4
+        # TODO: Handle states outside of range(min(df.s)-1, max(df.s)-1): How to increase state number for below and
+        #  decrement for state number above
+        # TODO: Best thing to do is use state 4 below min
+        # TODO: Best thing to do is use state 3 above max
         policy.to_csv(outfile, index=False, header=False)
     end = timer()
     elapsed = end - start
